@@ -1,37 +1,131 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DatePicker from "react-native-date-picker";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 
 const App = () => {
-  const taskTitle = "Test task";
-  const [taskDate, setTaskDate] = useState(null);
-  const [selectedTask, setSelectedTask] = useState(false);
-  const handleDateChange = (event, date) => {
-    setTaskDate(date);
-    setSelectedTask(false);
+  const [tasks, setTasks] = useState([]);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [pickerDate, setPickerDate] = useState(new Date());
+
+  const handleAddTask = () => {
+    const title = taskTitle.trim();
+
+    if (!title) return;
+
+    const newTask = {
+      id: `${Date.now()}-${Math.random()}`,
+      title,
+      dueDate: null,
+    };
+
+    setTasks((prevTasks) => [...prevTasks, newTask]);
+    setTaskTitle("");
   };
 
-  const handleTaskSelect = () => {
-    if (selectedTask) return;
-    setSelectedTask(true);
+  const handleEditTask = (task) => {
+    setTaskTitle(task.title);
+    setEditingTaskId(task.id);
+  };
+
+  const handleSaveTask = () => {
+    const title = taskTitle.trim();
+
+    if (!title) return;
+
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === editingTaskId ? { ...task, title } : task,
+      ),
+    );
+
+    setTaskTitle("");
+    setEditingTaskId(null);
+  };
+
+  const handleDeleteTask = (id) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
+  };
+
+  const handleOpenDatePicker = (task) => {
+    setPickerDate(task.dueDate || new Date());
+    setSelectedTaskId(task.id);
+  };
+
+  const handleConfirmDate = (date) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === selectedTaskId ? { ...task, dueDate: date } : task,
+      ),
+    );
+
+    setSelectedTaskId(null);
+  };
+
+  const handleCancelDatePicker = () => {
+    setSelectedTaskId(null);
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.taskItem} onPress={handleTaskSelect}>
-        <Text style={styles.taskTitle}>{taskTitle}</Text>
-        <Text>{taskDate ? taskDate.toLocaleDateString() : "No Due Date"}</Text>
-      </TouchableOpacity>
-      {selectedTask && (
-        <DateTimePicker
-          testID="date-picker"
-          value={taskDate || new Date()}
-          mode="date"
-          is24Hour={true}
-          display="default"
-          onChange={handleDateChange}
+      <ScrollView style={styles.taskList}>
+        {tasks.map((task) => (
+          <View key={task.id} style={styles.taskItem}>
+            <Text style={styles.taskTitle}>{task.title}</Text>
+
+            <TouchableOpacity onPress={() => handleOpenDatePicker(task)}>
+              <Text style={styles.dueDate}>
+                {task.dueDate ? task.dueDate.toLocaleString() : "No Due Date"}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.actions}>
+              <TouchableOpacity onPress={() => handleEditTask(task)}>
+                <Text style={styles.actionText}>Edit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => handleDeleteTask(task.id)}>
+                <Text style={styles.actionText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter task title"
+          value={taskTitle}
+          onChangeText={setTaskTitle}
         />
-      )}
+
+        <TouchableOpacity
+          onPress={editingTaskId ? handleSaveTask : handleAddTask}
+        >
+          <Text style={styles.buttonText}>
+            {editingTaskId ? "Save" : "Add Task"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <DatePicker
+        testID="date-picker"
+        modal
+        open={selectedTaskId !== null}
+        date={pickerDate}
+        mode="datetime"
+        onConfirm={handleConfirmDate}
+        onCancel={handleCancelDatePicker}
+      />
     </View>
   );
 };
@@ -39,17 +133,50 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    padding: 10,
+    justifyContent: "space-between",
+  },
+  taskList: {
+    flex: 1,
   },
   taskItem: {
-    minWidth: "80%",
+    padding: 10,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: "lightgray",
     borderRadius: 5,
   },
   taskTitle: {
     fontSize: 16,
+    marginBottom: 5,
+  },
+  dueDate: {
+    color: "gray",
+    marginBottom: 8,
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 15,
+  },
+  actionText: {
+    color: "blue",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "lightgray",
+    borderRadius: 5,
+    padding: 8,
+  },
+  buttonText: {
+    color: "blue",
   },
 });
 
